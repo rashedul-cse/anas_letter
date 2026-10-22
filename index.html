@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#163d49" />
   <meta name="description" content="Learn Arabic and English alphabets and numbers with pronunciation, flashcards, and quizzes." />
   <title>Letter Garden | Learn Arabic & English</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="app.js" defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Amiri:wght@400;700&display=swap" rel="stylesheet" /><link rel="stylesheet" href="style.css?v=2" />
+  <script src="app.js?v=2" defer></script>
 </head>
 <body>
   <div class="shell">
@@ -26,7 +26,7 @@
         <div class="toolbar"><p id="collectionInfo" aria-live="polite"></p><div class="toolbar-controls"><label for="searchInput" class="sr-only">Search letters or numbers</label><input id="searchInput" type="search" placeholder="Find a letter or number…" /><button id="flashcardBtn" class="outline-btn">✧ Flashcards</button></div></div>
         <div id="cardGrid" class="card-grid" aria-live="polite"></div>
       </section>
-      <section class="quiz-band" id="practice"><div><span class="eyebrow">PUT YOUR KNOWLEDGE TO WORK</span><h2>Ready for a little challenge?</h2><p>Listen, think, and pick the right answer. No pressure — every try helps.</p></div><button id="quizBtn" class="primary-btn light">Take a mini quiz →</button></section>
+      <section class="quiz-band" id="practice"><div><span class="eyebrow">PUT YOUR KNOWLEDGE TO WORK</span><h2>Ready for a little challenge?</h2><p>Listen, think, and pick the right answer. No pressure — every try helps.</p></div><div class="quiz-controls"><label for="quizMode">Choose quiz</label><select id="quizMode" aria-label="Choose quiz type"><option value="quick">Quick quiz · 10 random questions</option><option value="all">Full alphabet · selected tab</option><option value="mixed">Both alphabets · all 54 letters</option><option value="everything">Everything · all 74 cards</option></select><button id="quizBtn" class="primary-btn light">Start quiz →</button></div></section>
     </main>
     <footer>Made for curious minds · Learn at your own pace · <span lang="ar">بالتوفيق!</span></footer>
   </div>

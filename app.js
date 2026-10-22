@@ -2,7 +2,8 @@
 const arabicLetters = [
  ['ا','Alif','a / aa','alif'],['ب','Bā','b','baa'],['ت','Tā','t','taa'],['ث','Thā','th (think)','thaa'],['ج','Jīm','j','jeem'],['ح','Ḥā','strong h','haa'],['خ','Khā','kh','khaa'],['د','Dāl','d','daal'],['ذ','Dhāl','th (this)','dhaal'],['ر','Rā','rolled r','raa'],['ز','Zāy','z','zaay'],['س','Sīn','s','seen'],['ش','Shīn','sh','sheen'],['ص','Ṣād','emphatic s','saad'],['ض','Ḍād','emphatic d','daad'],['ط','Ṭā','emphatic t','taa heavy'],['ظ','Ẓā','emphatic dh','zaa heavy'],['ع','ʿAyn','throat sound','ayn'],['غ','Ghayn','gh','ghayn'],['ف','Fā','f','faa'],['ق','Qāf','deep q','qaaf'],['ك','Kāf','k','kaaf'],['ل','Lām','l','laam'],['م','Mīm','m','meem'],['ن','Nūn','n','noon'],['ه','Hā','h','haa light'],['و','Wāw','w / oo','waaw'],['ي','Yā','y / ee','yaa']
 ].map(([symbol,name,hint,roman],i)=>({id:`ar-${i}`,symbol,name,hint,roman,spoken:symbol,lang:'ar-SA'}));
-const englishLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((symbol,i)=>({id:`en-${i}`,symbol,name:symbol,hint:`${symbol.toLowerCase()} · letter ${i+1}`,roman:symbol,spoken:symbol,lang:'en-US'}));
+const englishLetterSounds=['ay','bee','see','dee','ee','eff','jee','aitch','eye','jay','kay','ell','em','en','oh','pee','cue','ar','ess','tee','you','vee','double you','ex','why','zee'];
+const englishLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((symbol,i)=>({id:`en-${i}`,symbol,name:symbol,hint:`${symbol.toLowerCase()} · letter ${i+1}`,roman:symbol,spoken:englishLetterSounds[i],lang:'en-US'}));
 const numberNames=['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
 const arabicNumberNames=['صِفْر','وَاحِد','اِثْنَان','ثَلَاثَة','أَرْبَعَة','خَمْسَة','سِتَّة','سَبْعَة','ثَمَانِيَة','تِسْعَة','عَشَرَة','أَحَدَ عَشَرَ','اِثْنَا عَشَرَ','ثَلَاثَةَ عَشَرَ','أَرْبَعَةَ عَشَرَ','خَمْسَةَ عَشَرَ','سِتَّةَ عَشَرَ','سَبْعَةَ عَشَرَ','ثَمَانِيَةَ عَشَرَ','تِسْعَةَ عَشَرَ'];
 const arabicDigits='٠١٢٣٤٥٦٧٨٩';
@@ -17,7 +18,17 @@ function saveSeen(){try{localStorage.setItem('letterGardenSeen',JSON.stringify([
 function updateProgress(){const count=[...seen].filter(id=>Object.values(collections).some(items=>items.some(item=>item.id===id))).length;$('progressLabel').textContent=`${count} of 74 cards explored`;$('progressFill').style.width=`${count/74*100}%`;}
 let toastTimer;
 function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),2200);}
-function speak(text,lang){if(!$('soundToggle').checked)return;if(!('speechSynthesis' in window)){toast('Speech is unavailable in this browser.');return;}window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=.77;u.pitch=1;const voices=window.speechSynthesis.getVoices();const match=voices.find(v=>v.lang.toLowerCase()===lang.toLowerCase())||voices.find(v=>v.lang.toLowerCase().startsWith(lang.slice(0,2)));if(match)u.voice=match;window.speechSynthesis.speak(u);}
+function speak(text,lang){
+ if(!$('soundToggle').checked)return;
+ if(!('speechSynthesis' in window)){toast('Speech is unavailable in this browser.');return;}
+ const synth=window.speechSynthesis;synth.cancel();
+ const u=new SpeechSynthesisUtterance(text);u.lang=lang;u.rate=lang.startsWith('en')?.87:.77;u.pitch=1;
+ const voices=synth.getVoices();const prefix=lang.slice(0,2).toLowerCase();
+ const candidates=voices.filter(v=>v.lang.toLowerCase().startsWith(prefix));
+ const match=candidates.find(v=>v.lang.toLowerCase()===lang.toLowerCase()&&v.localService)||candidates.find(v=>v.lang.toLowerCase()===lang.toLowerCase())||candidates.find(v=>v.localService)||candidates[0];
+ if(match)u.voice=match;else toast('Install a '+(prefix==='ar'?'Arabic':'English')+' voice for clearer pronunciation.');
+ synth.speak(u);
+}
 function play(item){seen.add(item.id);saveSeen();speak(item.spoken,item.lang);}
 function draw(){const query=$('searchInput').value.trim().toLowerCase();$('collectionInfo').textContent=headings[active]+' · Select a card to listen';const items=collections[active].filter(item=>[item.symbol,item.name,item.roman,item.hint,String(item.value??'')].join(' ').toLowerCase().includes(query));$('cardGrid').replaceChildren();if(!items.length){$('cardGrid').innerHTML='<p class="empty">No matches. Try another search!</p>';return;}for(const item of items){const card=document.createElement('button');card.type='button';card.className='letter-card '+(active==='arabic'?'arabic ':'')+(seen.has(item.id)?'seen':'');card.setAttribute('aria-label',`${item.name}, ${item.hint}. Play pronunciation`);const check=seen.has(item.id)?'<span class="check" aria-hidden="true">✓</span>':'';card.innerHTML=`${check}<span class="play" aria-hidden="true">♪</span><span class="symbol" ${active!=='english'?'lang="ar"':''}></span><span class="roman"></span><span class="sub"></span>`;card.querySelector('.symbol').textContent=item.symbol;card.querySelector('.roman').textContent=active==='numbers'?item.roman+' · '+item.name:item.name;card.querySelector('.sub').textContent=item.hint;card.addEventListener('click',()=>{play(item);card.classList.add('seen');if(!card.querySelector('.check'))card.insertAdjacentHTML('afterbegin','<span class="check" aria-hidden="true">✓</span>');});$('cardGrid').append(card);}}
 function selectTab(tab){active=tab;$('searchInput').value='';document.querySelectorAll('.tab').forEach(b=>{const selected=b.dataset.tab===tab;b.classList.toggle('active',selected);b.setAttribute('aria-selected',String(selected));});draw();}
@@ -26,12 +37,51 @@ $('searchInput').addEventListener('input',draw);
 $('startBtn').addEventListener('click',()=>$('learn').scrollIntoView({behavior:'smooth'}));
 function actionButton(label,callback,primary=false){const b=document.createElement('button');b.className=primary?'primary-btn':'outline-btn';b.textContent=label;b.addEventListener('click',callback);return b;}
 function dialogBody(html){$('dialogContent').innerHTML=html;}
-function flash(){mode='flash';const item=collections[active][index];$('dialogKicker').textContent=`FLASHCARDS · ${index+1} / ${collections[active].length}`;dialogBody('<div class="study-center"><div class="study-symbol" id="flashSymbol"></div><div class="study-name" id="flashName"></div><p class="study-detail" id="flashHint"></p><div class="study-actions" id="flashActions"></div></div><div class="dialog-bottom" id="flashNav"></div>');$('flashSymbol').textContent=item.symbol;$('flashName').textContent=active==='numbers'?`${item.name} · ${item.roman}`:item.name;$('flashHint').textContent=item.hint;const actions=$('flashActions');actions.append(actionButton('🔊 Listen',()=>play(item),true));if(active==='numbers')actions.append(actionButton('Hear English',()=>speak(item.name,'en-US')));const nav=$('flashNav');nav.append(actionButton('← Previous',()=>{index=(index+collections[active].length-1)%collections[active].length;flash();}));nav.append(actionButton('Next →',()=>{index=(index+1)%collections[active].length;flash();},true));seen.add(item.id);saveSeen();}
+function flash(){mode='flash';const item=collections[active][index];$('dialogKicker').textContent=`FLASHCARDS · ${index+1} / ${collections[active].length}`;dialogBody('<div class="study-center"><div class="study-symbol" id="flashSymbol"></div><div class="study-name" id="flashName"></div><p class="study-detail" id="flashHint"></p><div class="study-actions" id="flashActions"></div></div><div class="dialog-bottom" id="flashNav"></div>');$('flashSymbol').textContent=item.symbol;$('flashSymbol').classList.toggle('arabic-glyph',item.lang==='ar-SA');$('flashName').textContent=active==='numbers'?`${item.name} · ${item.roman}`:item.name;$('flashHint').textContent=item.hint;const actions=$('flashActions');actions.append(actionButton('🔊 Listen',()=>play(item),true));if(active==='numbers')actions.append(actionButton('Hear English',()=>speak(item.name,'en-US')));const nav=$('flashNav');nav.append(actionButton('← Previous',()=>{index=(index+collections[active].length-1)%collections[active].length;flash();}));nav.append(actionButton('Next →',()=>{index=(index+1)%collections[active].length;flash();},true));seen.add(item.id);saveSeen();}
 $('flashcardBtn').addEventListener('click',()=>{index=0;flash();$('studyDialog').showModal();});
 $('closeDialog').addEventListener('click',()=>$('studyDialog').close());
 $('studyDialog').addEventListener('click',event=>{if(event.target===$('studyDialog'))$('studyDialog').close();});
 function shuffle(items){const copy=[...items];for(let i=copy.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]];}return copy;}
-function startQuiz(){mode='quiz';questionIndex=0;score=0;const candidates=collections[active];quizItems=shuffle(candidates).slice(0,Math.min(10,candidates.length));showQuestion();$('studyDialog').showModal();}
-function showQuestion(){answered=false;if(questionIndex===quizItems.length){$('dialogKicker').textContent='PRACTICE COMPLETE';dialogBody(`<div class="study-center"><div class="study-symbol">🏆</div><h2>Your score: ${score} / ${quizItems.length}</h2><p class="study-detail">${score===quizItems.length?'Amazing! A perfect round!':'Great effort! Practice makes progress.'}</p><div id="finishActions" class="study-actions"></div></div>`);$('finishActions').append(actionButton('Play again',startQuiz,true));return;}const target=quizItems[questionIndex];$('dialogKicker').textContent=`MINI QUIZ · QUESTION ${questionIndex+1} OF ${quizItems.length}`;dialogBody('<p class="quiz-question">Which one is this?</p><div class="quiz-big" id="quizSymbol"></div><div id="quizOptions"></div><div id="quizStatus" class="quiz-status" aria-live="polite"></div><div class="study-actions" id="quizNext"></div>');$('quizSymbol').textContent=target.symbol;const wrong=shuffle(collections[active].filter(item=>item.id!==target.id)).slice(0,3);for(const option of shuffle([target,...wrong])){const b=document.createElement('button');b.className='quiz-option';b.textContent=active==='numbers'?`${option.name} (${option.roman})`:option.name;b.addEventListener('click',()=>{if(answered)return;answered=true;const correct=option.id===target.id;if(correct){score++;b.classList.add('correct');$('quizStatus').textContent='✓ Correct! Well done.';play(target);}else{b.classList.add('wrong');$('quizStatus').textContent=`Correct answer: ${target.name}`;speak(target.spoken,target.lang);}document.querySelectorAll('.quiz-option').forEach(x=>{x.disabled=true;if(x.textContent===(active==='numbers'?`${target.name} (${target.roman})`:target.name))x.classList.add('correct');});$('quizNext').append(actionButton(questionIndex===quizItems.length-1?'See results →':'Next question →',()=>{questionIndex++;showQuestion();},true));});$('quizOptions').append(b);}}
+let quizPool=arabicLetters;
+function quizLabel(item){return item.id.startsWith('num-')?`${item.name} (${item.roman})`:`${item.name}${quizPool===null?' · '+(item.lang==='ar-SA'?'Arabic':'English'):''}`;}
+function startQuiz(){
+ mode='quiz';questionIndex=0;score=0;
+ const selection=$('quizMode').value;
+ let candidates;
+ if(selection==='mixed')candidates=[...arabicLetters,...englishLetters];
+ else if(selection==='everything')candidates=[...arabicLetters,...englishLetters,...numbers];
+ else candidates=collections[active];
+ quizPool=(selection==='mixed'||selection==='everything')?null:candidates;
+ quizItems=shuffle(candidates);
+ if(selection==='quick')quizItems=quizItems.slice(0,Math.min(10,quizItems.length));
+ showQuestion();if(!$('studyDialog').open)$('studyDialog').showModal();
+}
+function showQuestion(){
+ answered=false;
+ if(questionIndex===quizItems.length){
+  $('dialogKicker').textContent='PRACTICE COMPLETE';
+  dialogBody(`<div class="study-center"><div class="study-symbol">🏆</div><h2>Your score: ${score} / ${quizItems.length}</h2><p class="study-detail">${score===quizItems.length?'Amazing! A perfect round!':'Great effort! Practice makes progress.'}</p><div id="finishActions" class="study-actions"></div></div>`);
+  $('finishActions').append(actionButton('Play again (reshuffle)',startQuiz,true));return;
+ }
+ const target=quizItems[questionIndex];
+ $('dialogKicker').textContent=`QUIZ · QUESTION ${questionIndex+1} OF ${quizItems.length} · SCORE ${score}`;
+ dialogBody('<p class="quiz-question">Which one is this?</p><div class="quiz-big" id="quizSymbol"></div><div class="study-actions" id="quizListen"></div><div id="quizOptions"></div><div id="quizStatus" class="quiz-status" aria-live="polite"></div><div class="study-actions" id="quizNext"></div>');
+ $('quizSymbol').textContent=target.symbol;
+ $('quizSymbol').classList.toggle('arabic-glyph',target.lang==='ar-SA');
+ $('quizListen').append(actionButton('🔊 Hear this',()=>speak(target.spoken,target.lang)));
+ const source=target.id.startsWith('ar-')?arabicLetters:target.id.startsWith('en-')?englishLetters:numbers;
+ const wrong=shuffle(source.filter(item=>item.id!==target.id)).slice(0,3);
+ for(const option of shuffle([target,...wrong])){
+  const b=document.createElement('button');b.className='quiz-option';b.textContent=quizLabel(option);
+  b.addEventListener('click',()=>{
+   if(answered)return;answered=true;
+   const correct=option.id===target.id;
+   if(correct){score++;b.classList.add('correct');$('quizStatus').textContent='✓ Correct! Well done.';play(target);}
+   else{b.classList.add('wrong');$('quizStatus').textContent=`Correct answer: ${quizLabel(target)}`;speak(target.spoken,target.lang);}
+   document.querySelectorAll('.quiz-option').forEach(x=>{x.disabled=true;if(x.textContent===quizLabel(target))x.classList.add('correct');});
+   $('quizNext').append(actionButton(questionIndex===quizItems.length-1?'See results →':'Next question →',()=>{questionIndex++;showQuestion();},true));
+  });$('quizOptions').append(b);
+ }
+}
 $('quizBtn').addEventListener('click',startQuiz);
 updateProgress();draw();
